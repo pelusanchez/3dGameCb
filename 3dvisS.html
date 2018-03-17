@@ -1,0 +1,577 @@
+<html>
+    <head></head>
+    <body>
+    
+    <script languaje="JavaScript" src="three.min.js"></script>
+    <script languaje="JavaScript" src="textures.js"></script>
+    <script type="text/javascript" src="StereoEffect.js"></script>
+    <script type="text/javascript">
+
+        let scene = new THREE.Scene();
+        let camera;
+
+
+
+        let requestPointerLock = (document.webkitRequestPointerLock || document.mozRequestPointerLock || document.requestPointerLock);
+        let exitPointerLock = (document.webkitExitPointerLock || document.mozExitPointerLock || document.exitPointerLock);
+
+        let renderer;
+        let ventana;
+
+        let lastMovement=0;
+        let lastUpdate=+new Date();
+
+        var raycaster = new THREE.Raycaster();
+
+        raycaster.far=1;
+        raycaster.near=0.2;
+
+        var raycasterGround = new THREE.Raycaster();
+        raycasterGround.far=raycaster.far=1;
+        raycasterGround.near=raycaster.near=0.2;
+
+        var raycasterUser = new THREE.Raycaster();
+
+        var mousePos = new THREE.Vector2();
+        let effect;
+
+
+        let materialAzul = new THREE.MeshPhysicalMaterial({ color: 0x0000FF, reflectivity: 0.1});
+        
+        let esferas=[];
+        let movementX=0, movementY=0;
+
+
+        let ventanaProperties = {
+            width: 0,
+            height : 0,
+            heightHalf : 0,
+            widthHalf: 0
+        }
+
+        let __pi_2 = Math.PI/2;
+        let __2_pi = 2*Math.PI;
+        let radToDeg=Math.PI/180;
+        let radToDeg_2=Math.PI/360;
+
+
+        /**
+         *  Cbjs3d:for mobile games
+         *
+         */
+        Cbjs3dutils={};
+        Cbjs3dutils.eventData={alpha: 0, beta: 0, gamma: 0};
+        Cbjs3dutils.conf ={};
+        Cbjs3dutils.first_device_orientation = [0,0,0];
+        Cbjs3dutils.fsTags = (function(){
+        var _tag = {};
+        if(document.exitFullscreen){
+            _tag["request"] = "requestFullscreen";
+            _tag["exit"] = "exitFullscreen";
+            _tag["element"] = "fullscreenElement";
+        }else if(document.webkitExitFullscreen){
+            _tag["request"] = "webkitRequestFullscreen";
+            _tag["exit"] = "webkitExitFullscreen";
+            _tag["element"] = "webkitFullscreenElement";
+        }else if(document.webkitCancelFullScreen){
+            _tag["request"] = "webkitRequestFullScreen";
+            _tag["exit"] = "webkitCancelFullscreen";
+            _tag["element"] = "webkitCurrentFullScreenElement";
+        }else if(document.mozCancelFullScreen){
+            _tag["request"] = "mozRequestFullscreen";
+            _tag["exit"] = "mozCancelFullScreen";
+            _tag["element"] = "mozFullScreenElement";
+        }else if(document.msExitFullscreen){
+            _tag["request"] = "msRequestFullscreen";
+            _tag["exit"] = "msExitFullscreen";
+            _tag["element"] = "msFullscreenElement";
+        }
+        return _tag;
+    
+
+    })();
+    /**
+    function: requestFS
+        This function request the fullscreen element. Returns false if
+        something is wrong.
+    */
+    Cbjs3dutils.requestFS = function(elm){
+        try {
+            elm[Cbjs3dutils.fsTags.request]();
+            return true;
+        }catch(e){
+            return false;
+        }
+    }
+
+
+    /**
+    function: isFS
+        This function returns true if is fullscreen.
+    */
+    Cbjs3dutils.isFS = function(elm){
+        return (document[Cbjs3dutils.fsTags.element]!=null);
+    }
+
+
+
+    /**
+    function: isLandscape
+        This function returns true if the device is in landscape mode.
+    */
+    Cbjs3dutils.isLandscape = function(){
+        return true; //(screen.height < screen.width);
+    }
+
+    /**
+    function: exitFS
+
+        This function exits the fullScreen
+    */
+    Cbjs3dutils.exitFS = function(){
+        document[Cbjs3dutils.fsTags.exit]();
+    }
+
+    /**
+    function: toggleFullscreen
+
+        This function toggle on or off the fullscreen.
+    */
+    Cbjs3dutils.toggleFullscreen= function(){
+
+        if(Cbjs3dutils.isFS()){
+            Cbjs3dutils.exitFS();
+        }else{
+            if(Cbjs3dutils.isLandscape()){
+                if(Cbjs3dutils.requestFS(Cbjs3dutils.conf.divElm)){
+                    //Cbjs3dutils.getMotion();
+                }else{
+                    Cbjs3dutils.displayError("Unable to fullscreen. Try with other browser.");
+                }
+            }else{
+                Cbjs3dutils.displayError("Put the device in landscape mode.");
+            }
+        }
+    }
+
+
+        Cbjs3dutils.getMotion = function(){
+            if(Cbjs3dutils.eventData.alpha>=0 && Cbjs3dutils.eventData.alpha<=360){
+                Cbjs3dutils.first_device_orientation = [Cbjs3dutils.eventData.alpha, Cbjs3dutils.eventData.beta, Cbjs3dutils.eventData.gamma];
+            }else{
+                Cbjs3dutils.first_device_orientation = [0,0,0];
+            }
+
+        }
+
+        Cbjs3dutils.requestMove = function(a){
+            try {
+                Cbjs3dutils.eventData = {
+                    alpha: Math.floor(a.alpha*10)/10,
+                    beta: Math.floor(a.beta*10)/10,
+                    gamma: Math.floor(a.gamma*10)/10
+                    };
+                    movementX=Cbjs3dutils.eventData.alpha*radToDeg;
+                    if(Cbjs3dutils.eventData.gamma<0){
+                        movementX-=Math.PI;
+                        if(movementX<0){ movementX+=__2_pi;}
+                        //movementY=(90+Cbjs3dutils.eventData.gamma)*radToDeg_2;
+                    }else{
+                        //movementY=(Cbjs3dutils.eventData.gamma-90)*radToDeg_2;
+                        
+                    }
+                    document.getElementById("fps").innerText=Math.floor(a.alpha*10)/10+","+Math.floor(a.gamma*10)/10+"/"+Math.floor(movementX*10)/10+","+Math.floor(movementY*10)/10;
+            }catch(e){
+                console.log("Cant move device due to hardware error!");
+            }
+        }
+
+
+        let square=(x)=>x*x*x;
+        let stoppingUserMovement=false;
+        let jumping=false;
+        let headPositionPhase=[0,0];
+
+
+
+
+        function animate() {
+            //requestAnimationFrame( animate );
+            //effect.render( scene, camera );
+
+            let elapsedTime=(+new Date()-lastUpdate);
+
+            // HEAD MOVEMENT STOP
+            if(stoppingUserMovement){
+
+                headPositionPhase[0]+=elapsedTime*0.007;
+                camera.position.y=0.1*Math.abs(Math.sin(headPositionPhase[0]));
+                
+                if(camera.position.y<=0.01){
+                     stoppingUserMovement=false;
+                     headPositionPhase[0]=0;
+                     camera.position.y=0;
+                }
+
+              //  console.log(jumping+","+headPositionPhase[0]+"<->"+camera.position.y);
+            }
+
+            // JUMP
+            if(jumping){
+                
+                headPositionPhase[0]+=elapsedTime*0.007;
+                camera.position.y=0.7*(1-Math.exp(headPositionPhase[0]-1,2));
+                if(headPositionPhase[0]>=1){
+                    headPositionPhase[0]=0;
+                    jumping=false;
+                }
+            }
+
+            camera.rotation.x=-movementY*Math.cos(camera.rotation.y);
+            camera.rotation.z=movementY*Math.sin(camera.rotation.y);
+            
+            if(Math.abs(movementX)>0.001){
+
+                camera.rotation.y=movementX;
+
+            }
+
+
+
+            camera.updateMatrixWorld();
+            
+
+            //document.getElementById("fps").innerText="FPS: "+parseInt(1000/((+new Date())-lastUpdate));
+
+            lastUpdate=+new Date();
+            
+
+            
+            
+        }
+
+        let stopUserMovement=(keyCode)=>{
+            if(!jumping){stoppingUserMovement=true;}
+        };
+
+        let userMovement=(keyCode)=>{
+            let direction=new THREE.Vector3(0,0,0);
+
+            let msin=Math.sin(camera.rotation.y);
+            let mcos=Math.cos(camera.rotation.y);
+            
+            if(keyCode==65){
+                direction.x=-mcos;
+                direction.z=msin;
+            }else if(keyCode==87){
+                direction.x=-msin;
+                direction.z=-mcos;
+
+            }else if(keyCode==68){
+                direction.x=mcos;
+                direction.z=-msin;
+            }else if(keyCode==83){
+                
+                direction.x=msin;
+                direction.z=mcos;
+            }else if(keyCode==32){
+                if(!jumping){
+                    headPositionPhase[0]=0;
+                    jumping=true;
+                }
+            }else{
+                console.log(keyCode);
+            }
+
+            console.log(jumping);
+            if(direction.length() != 0){
+
+                let a=new THREE.Vector3(camera.position.x,camera.position.y,camera.position.z);
+                
+                raycaster.set(a, direction);
+
+                var intersects = raycaster.intersectObjects( scene.children );
+
+                if(intersects.length==0){
+                    let elapsedTime=(+new Date())-lastMovement;
+                    let speed=0;
+                    if(elapsedTime>50){
+                        speed=0.05;
+                    }else{
+                        speed=(50-elapsedTime)*0.005;
+                    }
+
+                    headPositionPhase[0]+=elapsedTime*0.007;
+                    camera.position.y=0.1*Math.abs(Math.sin(headPositionPhase[0]));
+                    camera.position.x+=speed*direction.x;
+                    camera.position.z+=speed*direction.z;
+                    lastMovement=+new Date();
+                }
+            }
+
+            
+        };
+
+
+        function onWindowResize() {
+                windowHalfX = window.innerWidth / 2;
+                windowHalfY = window.innerHeight / 2;
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                effect.setSize( window.innerWidth, window.innerHeight );
+            }
+        let light;
+
+        window.onload=function(){
+            ventana=document.getElementById("ventana");
+            
+            Cbjs3dutils.conf.divElm=ventana;    //Cbjs3d configuration
+
+            ventana.width=ventana.clientWidth;
+            ventana.height=ventana.clientHeight;
+            renderer= new THREE.WebGLRenderer({canvas: ventana});
+            camera = new THREE.PerspectiveCamera( 40, ventana.clientWidth / ventana.clientHeight, 0.1, 1000 );
+
+            effect = new THREE.StereoEffect( renderer );
+            effect.setSize( window.innerWidth, window.innerHeight );
+
+            camera.position.z=18;
+            camera.position.x=-18;
+            camera.position.y=0;
+            
+            camera.rotation.order="XZY";
+
+            light = new THREE.AmbientLight( 0xFFFFFF ); // soft white light
+            scene.add( light );
+
+            ventanaProperties.width=parseInt(document.getElementById("ventana").clientWidth);
+            ventanaProperties.height=parseInt(ventana.clientHeight);
+            ventanaProperties.heightHalf=ventanaProperties.height/2;
+            ventanaProperties.widthHalf=ventanaProperties.width/2;
+            document.getElementById("ventana").addEventListener("mousemove",(e)=>{
+                mousePos.x=2*(e.clientX/ventanaProperties.widthHalf-1);
+                mousePos.y=2*(e.clientY/ventanaProperties.heightHalf-1);
+                
+            });
+            escenario();
+
+            ventana.addEventListener("click",(e)=>{
+                Cbjs3dutils.toggleFullscreen();
+            });
+
+
+            window.addEventListener( 'resize', onWindowResize, false );
+            window.addEventListener("deviceorientation", function(event) { Cbjs3dutils.requestMove(event); }, false);
+
+            animate();
+            
+        }
+
+        
+
+        /**
+         *  Funcion: crearCirculo
+         *
+         */
+        let crearEsfera=(position)=>{
+            let i = esferas.length;
+            esferas[i] = new THREE.Mesh(new THREE.SphereGeometry((position.r === undefined) ? 1 : position.r,6,6), materialAzul);
+            esferas[i].position.x=position.x;
+            esferas[i].position.y=position.y;
+            esferas[i].position.z=position.z;
+            scene.add(esferas[i]);
+        };
+        let planes=[];
+        let ground=[];
+        let ceiling=[];
+        let geometryWall5 = new THREE.BoxGeometry( 5, 2, 0.5 );
+        let geometryWall10 = new THREE.BoxGeometry( 10, 2, 0.5 );
+        let geometryWall20 = new THREE.BoxGeometry( 20, 2, 0.5 );
+
+
+
+        let escenario=()=>{
+
+
+            var geometryPlane = new THREE.PlaneGeometry( 40, 2 );
+
+            
+            var geometryPlane05 = new THREE.PlaneGeometry( 0.5, 2 );
+            var geometryPlane10 = new THREE.PlaneGeometry( 10, 2 );
+            var geometryPlane20 = new THREE.PlaneGeometry( 20, 2 );
+            var geometryPlane15 = new THREE.PlaneGeometry( 15, 2 );
+
+
+            var geometryGround = new THREE.PlaneGeometry( 40, 40 );
+
+            // PAREDES
+            planes[0] = new THREE.Mesh( geometryPlane, wall1material );
+            planes[0].position.z=-20;
+
+            planes[1] = new THREE.Mesh( geometryPlane, wall1material );
+            planes[1].rotation.y=Math.PI/2;
+            planes[1].position.x=-20;
+
+            planes[2] = new THREE.Mesh( geometryPlane, wall1material );
+            planes[2].rotation.y=-Math.PI/2;
+            planes[2].position.x=+20;
+
+            planes[3] = new THREE.Mesh( geometryPlane, wall1material );
+            planes[3].rotation.y=Math.PI;
+            planes[3].position.z=+20;
+
+            // Paredes secundarias
+
+
+            planes[4] = new THREE.Mesh( geometryWall10, wall10materials );
+            planes[4].doubleSided=true;
+            planes[4].position.x=-15;
+            planes[4].position.z=15;
+            planes[4].rotation.y=Math.PI/2;
+
+            planes[5] = new THREE.Mesh( geometryWall20, wall20materials );
+            planes[5].doubleSided=true;
+            planes[5].position.x=-8;
+            planes[5].position.z=10;
+
+            planes[6] = new THREE.Mesh( geometryWall5, wall5materials );
+            planes[6].doubleSided=true;
+            planes[6].position.x=-18;
+            planes[6].position.z=2;
+
+            planes[7] = new THREE.Mesh( geometryWall10, wall10materials );
+            planes[7].doubleSided=true;
+            planes[7].position.x=-10;
+            planes[7].position.z=3;
+            planes[7].rotation.y=Math.PI/2;
+
+
+            planes[8] = new THREE.Mesh( geometryWall5, wall5materials );
+            planes[8].doubleSided=true;
+            planes[8].position.x=0;
+            planes[8].position.z=-2;
+
+            planes[9] = new THREE.Mesh( geometryWall20, wall20materials );
+            planes[9].doubleSided=true;
+            planes[9].position.x=0;
+            planes[9].position.z=5;
+
+            planes[10] = new THREE.Mesh( geometryWall20, wall20materials );
+            planes[10].doubleSided=true;
+            planes[10].position.x=-5;
+            planes[10].position.z=-10;
+
+            planes[11] = new THREE.Mesh( geometryWall10, wall10materials );
+            planes[11].doubleSided=true;
+            planes[11].position.x=-15;
+            planes[11].position.z=-8;
+            planes[11].rotation.y=Math.PI/2;
+
+            planes[12] = new THREE.Mesh( geometryWall10, wall10materials );
+            planes[12].doubleSided=true;
+            planes[12].position.x=0;
+            planes[12].position.z=-17;
+            planes[12].rotation.y=Math.PI/2;
+
+            planes[13] = new THREE.Mesh( geometryWall10, wall10materials );
+            planes[13].doubleSided=true;
+            planes[13].position.x=2.5;
+            planes[13].position.z=-2;
+            planes[13].rotation.y=Math.PI/2;
+
+            planes[14] = new THREE.Mesh( geometryWall10, wall10materials );
+            planes[14].doubleSided=true;
+            planes[14].position.x=2.5;
+            planes[14].position.z=10;
+            planes[14].rotation.y=Math.PI/2;
+
+            planes[15] = new THREE.Mesh( geometryWall10, wall10materials );
+            planes[15].doubleSided=true;
+            planes[15].position.x=10;
+            planes[15].position.z=15;
+            planes[15].rotation.y=Math.PI/2;
+
+            planes[16] = new THREE.Mesh( geometryWall20, wall20materials );
+            planes[16].doubleSided=true;
+            planes[16].position.x=10;
+            planes[16].position.z=-5.25;
+            planes[16].rotation.y=Math.PI/2;
+
+            planes[17] = new THREE.Mesh( geometryWall5, wall5materials );
+            planes[17].doubleSided=true;
+            planes[17].position.x=18;
+            planes[17].position.z=10;
+            
+
+            planes[18] = new THREE.Mesh( geometryWall5, wall5materials );
+            planes[18].doubleSided=true;
+            planes[18].position.x=18;
+            planes[18].position.z=-10;
+
+            planes[19] = new THREE.Mesh( geometryWall5, wall5materials );
+            planes[19].doubleSided=true;
+            planes[19].position.x=12;
+            planes[19].position.z=0;
+            
+
+
+
+            let i=planes.length;
+            while(i--){
+                scene.add( planes[i] );
+            }
+
+
+
+            // SUELO
+            ground[0] = new THREE.Mesh( geometryGround, ground1material );
+            ground[0].rotation.x=-Math.PI/2;
+            ground[0].position.y=-1;
+            scene.add( ground[0] );
+
+            // TECHO
+            ceiling[0] = new THREE.Mesh( geometryGround, ceiling1material );
+            ceiling[0].rotation.x=Math.PI/2;
+            ceiling[0].position.y=1;
+            scene.add( ceiling[0] );
+
+            
+
+        };
+
+    </script>
+    <style type="text/css">
+    html, body {
+        padding:0;
+        margin:0;
+        width:100%;
+        height:100%;
+        cursor:none;
+    }
+    #ventana {
+        position:absolute;
+        top:0px;
+        left:0px;
+        right:0px;
+        bottom:0px;
+        width:100%;
+        height: 100%;
+        z-index:0;
+    }
+    #fps {
+        position: absolute;
+        top:0px;
+        left:0px;
+        width:100px;
+        height:20px;
+        background: rgba(255,255,255,0.7);
+        z-index:1;
+    }
+    </style>
+    <div id="fps">
+    FPS:---
+    </div>
+    <canvas id="ventana" style="display:none;">
+    </canvas>
+
+</html>
