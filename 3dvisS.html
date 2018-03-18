@@ -172,15 +172,15 @@
                     gamma: Math.floor(a.gamma*10)/10
                     };
                     movementX=Cbjs3dutils.eventData.alpha*radToDeg;
-                    if(Cbjs3dutils.eventData.gamma<0){
+                    if(Math.abs(Cbjs3dutils.eventData.beta)<90){    // Trick 180 shift
                         movementX-=Math.PI;
                         if(movementX<0){ movementX+=__2_pi;}
-                        //movementY=(90+Cbjs3dutils.eventData.gamma)*radToDeg_2;
+                        movementY=(90+Cbjs3dutils.eventData.gamma)*radToDeg_2;
                     }else{
-                        //movementY=(Cbjs3dutils.eventData.gamma-90)*radToDeg_2;
+                        movementY=(Cbjs3dutils.eventData.gamma-90)*radToDeg_2;
                         
                     }
-                    document.getElementById("fps").innerText=Math.floor(a.alpha*10)/10+","+Math.floor(a.gamma*10)/10+"/"+Math.floor(movementX*10)/10+","+Math.floor(movementY*10)/10;
+                    document.getElementById("fps").innerText=Math.floor(movementX*10)/10;
             }catch(e){
                 console.log("Cant move device due to hardware error!");
             }
@@ -196,8 +196,8 @@
 
 
         function animate() {
-            //requestAnimationFrame( animate );
-            //effect.render( scene, camera );
+            requestAnimationFrame( animate );
+            effect.render( scene, camera );
 
             let elapsedTime=(+new Date()-lastUpdate);
 
@@ -571,7 +571,7 @@
     <div id="fps">
     FPS:---
     </div>
-    <canvas id="ventana" style="display:none;">
+    <canvas id="ventana">
     </canvas>
 
 </html>
