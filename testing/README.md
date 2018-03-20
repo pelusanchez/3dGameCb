@@ -11,8 +11,10 @@ Open terminal, type:
   ```
   apt-get install node
   ```
-When installed, run
+When installed, run:
+
   ```
   npm install socket.io
   ```
+  
 Then you will be able to run com.js.
