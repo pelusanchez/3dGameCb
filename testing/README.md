@@ -10,6 +10,7 @@ Files test.html and testVis.html are used for sensor accelerometer study:
 Open terminal, type:
   
   > apt-get install node
+  
 When installed, run:
 
   > npm install socket.io
