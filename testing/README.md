@@ -8,13 +8,10 @@ Files test.html and testVis.html are used for sensor accelerometer study:
   
 ### Installing node and socket.io (Linus users)
 Open terminal, type:
-  ```
-  apt-get install node
-  ```
+  
+  > apt-get install node
 When installed, run:
 
-  ```
-  npm install socket.io
-  ```
+  > npm install socket.io
   
 Then you will be able to run com.js.
