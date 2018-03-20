@@ -6,7 +6,7 @@ Here you can found scripts used to game sensor development.
 Files test.html and testVis.html are used for sensor accelerometer study:
   Put both files on a webserver folder. Run using *node* (with *socket.io*) com.js, then open test.html from mobile and testVis.html from desktop.
   
-### Installing node and socket.io (Linus users)
+### Installing node and socket.io (Linux users)
 Open terminal, type:
   
   > apt-get install node
