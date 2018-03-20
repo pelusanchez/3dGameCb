@@ -1,0 +1,114 @@
+<html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
+<script>
+const socket = io('http://192.168.0.13:8080');
+
+let dec=(x)=>Math.floor(x*10)/10;
+let dz=0;
+let backTime=+new Date();
+
+let a=0.05;
+let lastUpdate=+new Date();
+let timeAverage=[[],[],[]];
+let sensorsErrors=[0,0,0];
+
+let timeAverageIndex=0;
+let dateAverageIndex=+new Date();
+let last=[0,0,0];
+let maxX=0;
+
+let getAverage=(x)=>{
+    let _x=0;
+    let i=x.length;
+    if(i==0){return 0;}
+    
+    while(i--){_x+=x[i];}
+    
+    return _x/x.length;
+}
+
+function handleMotionEvent(event) {
+
+    
+
+    let x = dec(event.acceleration.x);
+    let y = dec(event.acceleration.y);
+    let z = dec(event.acceleration.z);
+
+    let _x=getAverage(timeAverage[0]);
+    let _y=getAverage(timeAverage[1]);
+    let _z=getAverage(timeAverage[2]);
+
+
+    if(Math.abs(x)<_x*1.5 || Math.abs(y)<_y*1.5 || Math.abs(z)<_z*1.5){
+        timeAverage[0][timeAverageIndex]=x;
+        timeAverage[1][timeAverageIndex]=y;
+        timeAverage[2][timeAverageIndex]=z;
+    }
+
+    timeAverageIndex++;
+    if((+new Date()-dateAverageIndex)>1000){timeAverageIndex=0;dateAverageIndex=+new Date();}    // 1 second average
+
+    
+        
+        let cx= 60+(_x+a*(_x-x))*150;
+        let cy= 60+(_y+a*(_y-y))*150;
+        let cz= 60+(_z+a*(_z-z))*150;
+        document.getElementById("x").innerText=cx;
+        document.getElementById("y").innerText=cy;
+        document.getElementById("z").innerText=cz;
+        document.getElementById("x").style.background="hsl("+cx+",50%,50%)";
+        document.getElementById("y").style.background="hsl("+cy+",50%,50%)";
+        document.getElementById("z").style.background="hsl("+cz+",50%,50%)";
+        socket.emit('data', {x:cx, y:cy, z:cz});
+        
+
+        
+        //last=[xLp, yLp, zLp];
+
+    
+
+
+/*    let dt=(+new Date()-backTime);
+    dz=dz+a*(z-dz);
+    let c="#000000";*/
+
+    
+    /*if((+new Date()-lastUpdate)>1000){
+        document.body.innerHTML="";
+
+        if(z<1){
+            document.body.innerHTML="ATRAS";
+            lastUpdate=+new Date();
+        }
+        if(z>1){
+            document.body.innerHTML="DELANTE";
+            lastUpdate=+new Date();
+        }
+
+        if(z>3){
+            document.body.innerHTML="CLICK";
+            lastUpdate=+new Date();
+        }
+    }else{
+        
+    }*/
+    dz=z;
+    backTime=+new Date();
+    // Do something awesome.
+}
+
+window.addEventListener("devicemotion", handleMotionEvent, true);
+</script>
+<style type="text/css">
+#x, #y, #z {
+    background:#000000;
+    padding:20px 20px 20px 20px;
+}
+</style>
+<body>
+<div id="x">X</div>
+<div id="y">Y</div>
+<div id="z">Z</div>
+</body>
+</html>

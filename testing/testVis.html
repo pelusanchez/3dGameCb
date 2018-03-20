@@ -1,0 +1,69 @@
+<html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
+<script>
+const socket = io('http://192.168.0.13:8080');
+let ventana, ctx;
+
+let d=0;
+let v = 0;
+
+let backTime=+new Date();
+
+let back = 0;
+let i=0;
+
+const deltaA=0.5;
+socket.on('d', function(data){
+    //console.log(data.z);
+    
+    let dt=(+new Date()-backTime)*0.001;
+
+    ctx.beginPath();
+    ctx.strokeStyle="#000000";
+    ctx.moveTo(i, back);
+    ctx.lineTo(i+1, data.z);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.strokeStyle="#FF0000";
+    ctx.moveTo(i, 100+100*v);
+
+    if(Math.abs(data.z-back)>deltaA){
+        v+=(data.z-back)*dt;
+        
+    }
+    
+    //let dt=(+new Date()-backTime)/1000;
+    
+    //console.log(distance-60);
+    ctx.lineTo(i+1, 100+100*v);
+    ctx.stroke();
+
+
+    
+    back=data.z;
+    backTime=+new Date();
+
+    i++;
+    if(i>1000){
+        ctx.clearRect(0,0,1000,400);
+        i=0;
+    }
+});
+
+window.onload=()=>{
+    ventana=document.getElementById('ventana');
+    ctx=ventana.getContext('2d');
+}
+</script>
+<style type="text/css">
+#x, #y, #z {
+    background:#000000;
+    padding:20px 20px 20px 20px;
+}
+</style>
+<body>
+<canvas width="1000" height="400" id="ventana">
+</canvas>
+</body>
+</html>
