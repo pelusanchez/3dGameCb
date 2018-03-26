@@ -7,6 +7,8 @@
     <script type="text/javascript" src="StereoEffect.js"></script>
     <script type="text/javascript">
 
+    let sense=50;
+
         let scene = new THREE.Scene();
         let camera;
 
@@ -180,10 +182,122 @@
                         movementY=(Cbjs3dutils.eventData.gamma-90)*radToDeg_2;
                         
                     }
-                    document.getElementById("fps").innerText=Math.floor(movementX*10)/10;
+                    //document.getElementById("fps").innerText=Math.floor(movementX*10)/10;
             }catch(e){
                 console.log("Cant move device due to hardware error!");
             }
+        }
+        /**
+         *  Accelerometer motion
+         */
+
+        let dec=(x)=>Math.round(x*10)/10;
+
+        let a=0.01;
+        let timeAverage=[[],[],[]];
+
+        let timeAverageIndex=0;
+        let dateAverageIndex=+new Date();
+
+        let getAverage=(x)=>{
+            let _x=0;
+            let i=x.length;
+            if(i==0){return 0;}
+            
+            while(i--){_x+=x[i];}
+            
+            return _x/x.length;
+        }
+        let absoluteMax=0;
+        let firstA=0;   // 1: De frente, 2: Detrás
+        let firstT=0;
+        let lastT=0;
+
+        let movementNow=0;
+
+        function handleMotionEvent(event) {
+
+            let dateNow=+new Date();
+
+            let x = dec(event.acceleration.x);
+            let y = dec(event.acceleration.y);
+            let z = dec(event.acceleration.z);
+
+            let _x=getAverage(timeAverage[0]);
+            let _y=getAverage(timeAverage[1]);
+            let _z=getAverage(timeAverage[2]);
+
+
+            
+            timeAverage[0][timeAverageIndex]=x;
+            timeAverage[1][timeAverageIndex]=y;
+            timeAverage[2][timeAverageIndex]=z;
+
+            timeAverageIndex++;
+            if((dateNow-dateAverageIndex)>500){timeAverageIndex=0;dateAverageIndex=dateNow;}    // 1 second average
+
+            
+                // Low pass filter
+                let cx= 60+(_x+a*(_x-x))*150;
+                let cy= 60+(_y+a*(_y-y))*150;
+                //let cz= 60+(_z+a*(_z-z))*150;
+                let cz=Math.round(_z*150);
+
+                if(0==firstA && (dateNow-lastT)>400){
+                    // Look for the curve begin
+                    if(cz>sense){
+                        firstA=2;
+                        firstT=dateNow;
+                    }
+                    if(-cz>sense){
+                        firstA=1;
+                        firstT=dateNow;
+                    }
+                }else{
+                    if(dateNow-firstT>2000){        // Stop
+                        firstA=0;
+                    }
+
+                    if(absoluteMax<Math.abs(cz)){
+                        absoluteMax=Math.abs(cz);
+                    }
+
+                    if(cz>30 && firstA==1){
+
+                        if(movementNow==1){
+                            movementNow=0;
+                        }else{
+                            if(absoluteMax<150){
+                                movementNow=-1;
+                            }
+                        }
+                        document.getElementById("fps").innerText="Delante-Max: "+absoluteMax;
+
+                        lastT=dateNow;
+                        absoluteMax=0;
+                        firstA=0;
+                    }
+                    
+                    if(-cz>30 && firstA==2){
+
+                        if(movementNow==-1){
+                            movementNow=0;
+                        }else{
+                            if(absoluteMax>200){
+                                movementNow=1;
+                            }
+                        }
+                        document.getElementById("fps").innerText="Detras-Max: "+absoluteMax;
+
+                        lastT=dateNow;
+                        absoluteMax=0;
+                        firstA=0;
+                    }
+
+
+                }
+
+
         }
 
 
@@ -237,6 +351,39 @@
             }
 
 
+            if(0!=movementNow){
+                let direction=new THREE.Vector3(0,0,0);
+
+                let msin=Math.sin(camera.rotation.y);
+                let mcos=Math.cos(camera.rotation.y);
+
+
+                if(movementNow==1){
+                    direction.x=msin;
+                    direction.z=mcos;
+                }else{
+                    direction.x=-msin;
+                    direction.z=-mcos;
+
+                }
+                let a=new THREE.Vector3(camera.position.x,camera.position.y,camera.position.z);
+                
+                raycaster.set(a, direction);
+
+                var intersects = raycaster.intersectObjects( scene.children );
+
+                if(intersects.length==0){
+                    let speed=elapsedTime/400;
+
+                    headPositionPhase[0]+=elapsedTime*0.007;
+                    camera.position.y=0.1*Math.abs(Math.sin(headPositionPhase[0]));
+                    camera.position.x+=speed*direction.x;
+                    camera.position.z+=speed*direction.z;
+                }else{
+                    movementNow=0;
+                }
+            }
+
 
             camera.updateMatrixWorld();
             
@@ -254,7 +401,7 @@
             if(!jumping){stoppingUserMovement=true;}
         };
 
-        let userMovement=(keyCode)=>{
+        /*let userMovement=(keyCode)=>{
             let direction=new THREE.Vector3(0,0,0);
 
             let msin=Math.sin(camera.rotation.y);
@@ -310,7 +457,7 @@
             }
 
             
-        };
+        };*/
 
 
         function onWindowResize() {
@@ -362,7 +509,7 @@
 
             window.addEventListener( 'resize', onWindowResize, false );
             window.addEventListener("deviceorientation", function(event) { Cbjs3dutils.requestMove(event); }, false);
-
+            window.addEventListener("devicemotion", handleMotionEvent, true);
             animate();
             
         }
